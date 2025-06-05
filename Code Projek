@@ -1,0 +1,124 @@
+import heapq
+import itertools
+
+edges = [
+    ("Madrid", "Barcelona", 620), ("Madrid", "Valencia", 350), ("Madrid", "Sevilla", 530),
+    ("Madrid", "Zaragoza", 320), ("Madrid", "Valladolid", 210), ("Madrid", "Salamanca", 210),
+    ("Barcelona", "Zaragoza", 310), ("Barcelona", "Valencia", 350), ("Barcelona", "Bilbao", 610),
+    ("Sevilla", "Granada", 250), ("Sevilla", "Málaga", 210), ("Sevilla", "Salamanca", 470),
+    ("Valencia", "Zaragoza", 310), ("Valencia", "Málaga", 640), ("Valencia", "Granada", 510),
+    ("Zaragoza", "Bilbao", 310), ("Zaragoza", "Valladolid", 470), ("Granada", "Málaga", 130),
+    ("Granada", "Salamanca", 580), ("Bilbao", "Valladolid", 290), ("Bilbao", "Salamanca", 520),
+    ("Bilbao", "Málaga", 920), ("Barcelona", "Granada", 860), ("Valladolid", "Salamanca", 120),
+    ("Madrid", "Granada", 420), ("Madrid", "Málaga", 530), ("Zaragoza", "Salamanca", 580),
+    ("Valencia", "Bilbao", 610), ("Sevilla", "Zaragoza", 720), ("Madrid", "Bilbao", 400)
+]
+
+kota = sorted(set([city for edge in edges for city in edge[:2]]))
+
+def create_graph(edges):
+    graph = {city: [] for city in kota}
+    for u, v, dist in edges:
+        graph[u].append((v, dist))
+        graph[v].append((u, dist))
+    return graph
+
+graph = create_graph(edges)
+
+def get_distance(graph, city1, city2):
+    for neighbor, d in graph[city1]:
+        if neighbor == city2:
+            return d
+    return float('inf')
+
+def tsp_simple(graph, start_city, end_city):
+    other_cities = [city for city in kota if city != start_city and city != end_city]
+    min_dist = float('inf')
+    best_path = []
+
+    for perm in itertools.permutations(other_cities):
+        path = [start_city] + list(perm) + [end_city]
+        dist = 0
+        valid = True
+        for i in range(len(path)-1):
+            d = get_distance(graph, path[i], path[i+1])
+            if d == float('inf'):
+                valid = False
+                break
+            dist += d
+        if valid and dist < min_dist:
+            min_dist = dist
+            best_path = path
+
+    return min_dist, best_path
+
+def dijkstra(graph, start, end):
+    queue = [(0, start, [])]
+    visited = set()
+
+    while queue:
+        (cost, node, path) = heapq.heappop(queue)
+        if node in visited:
+            continue
+        visited.add(node)
+        path = path + [node]
+
+        if node == end:
+            return cost, path
+
+        for neighbor, weight in graph[node]:
+            if neighbor not in visited:
+                heapq.heappush(queue, (cost + weight, neighbor, path))
+
+    return float('inf'), []
+
+print("Daftar Kota:")
+for i, city in enumerate(kota):
+    print(f"{i+1}. {city}")
+
+try:
+    start_index = int(input("Pilih nomor kota awal: ")) - 1
+    end_index = int(input("Pilih nomor kota tujuan (akhir): ")) - 1
+
+    if 0 <= start_index < len(kota) and 0 <= end_index < len(kota):
+        start_city = kota[start_index]
+        end_city = kota[end_index]
+
+        kendaraan = input("Pilih transportasi (jalan, motor, mobil): ").lower()
+        kecepatan = {
+            "jalan": 5,
+            "motor": 40,
+            "mobil": 80
+        }
+
+        dijkstra_distance, dijkstra_path = dijkstra(graph, start_city, end_city)
+        if kendaraan in kecepatan:
+            dijkstra_time = dijkstra_distance / kecepatan[kendaraan]
+        else:
+            dijkstra_time = None
+
+        tsp_distance, tsp_path = tsp_simple(graph, start_city, end_city)
+        if kendaraan in kecepatan:
+            tsp_time = tsp_distance / kecepatan[kendaraan]
+        else:
+            tsp_time = None
+
+        print("\n===== HASIL RUTE DAN ESTIMASI WAKTU =====")
+
+        print(f"Rute tercepat (berdasarkan jalur tersingkat):")
+        print(" -> ".join(dijkstra_path))
+        print(f"Total jarak: {dijkstra_distance:.2f} km")
+        if dijkstra_time is not None:
+            print(f"Estimasi waktu: {dijkstra_time:.2f} jam")
+
+        print("\nRute kunjungan semua kota (TSP sederhana):")
+        print(" -> ".join(tsp_path))
+        print(f"Total jarak: {tsp_distance:.2f} km")
+        if tsp_time is not None:
+            print(f"Estimasi waktu: {tsp_time:.2f} jam")
+
+    else:
+        print("Nomor kota tidak valid.")
+
+except ValueError:
+    print("Input harus berupa angka.")
